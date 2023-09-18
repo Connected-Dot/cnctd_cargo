@@ -1,0 +1,17 @@
+[package]
+name = "cnctd_cargo"
+version = "0.1.2"
+edition = "2021"
+authors = ["Connected Dot Inc.", "Kyle Ebner <kyle@cnctd.world>"]
+description = "Cargo Methods"
+license = "MIT"
+repository = "https://github.com/Connected-Dot/cnctd_cargo"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+cnctd_shell = "0.1.1"
+tokio = { version = "1.32.0", features = ["full"] }
+toml = "0.8.0"

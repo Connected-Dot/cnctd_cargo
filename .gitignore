@@ -1,0 +1,23 @@
+# Compiled files
+/target/
+**/*.rs.bk
+
+# IDE - VSCode
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+*.swp
+*~
+Thumbs.db
+
+# Cargo artifacts
+Cargo.lock
+
+# Other common artifacts
+*.o
+*.a
+*.so
+*.exe
+*.env
