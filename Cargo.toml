@@ -1,6 +1,6 @@
 [package]
 name = "cnctd_cargo"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Connected Dot Inc.", "Kyle Ebner <kyle@cnctd.world>"]
 description = "Cargo Methods"
@@ -12,6 +12,6 @@ repository = "https://github.com/Connected-Dot/cnctd_cargo"
 
 [dependencies]
 anyhow = "1.0.75"
-cnctd_shell = "0.1.1"
+cnctd_shell = { version = "0.1.7", path = "../cnctd_shell" }
 tokio = { version = "1.32.0", features = ["full"] }
 toml = "0.8.0"

@@ -1,7 +1,7 @@
 use std::{env::set_current_dir, fs::File, io::{BufReader, BufRead, BufWriter, Write}};
 
-use toml::Value;
 use cnctd_shell::Shell;
+use toml::Value;
 
 pub struct RustCrate {
     pub name: String,
