@@ -1,5 +1,6 @@
 use std::{env::set_current_dir, fs::File, io::{BufReader, BufRead, BufWriter, Write}};
 
+use cnctd_rest::Rest;
 use cnctd_shell::Shell;
 use toml::Value;
 
@@ -171,6 +172,12 @@ impl Cargo {
         }
     
         Ok(())
+    }
+    
+    pub async fn get_latest_crate_version(crate_name: &str) -> anyhow::Result<String> {
+        let url = format!("https://crates.io/api/v1/crates/{}", crate_name);
+        let json: Value = Rest::get(&url).await?;
+        Ok(json["crate"]["max_version"].as_str().unwrap().to_string())
     }
 }
 
