@@ -1,19 +1,29 @@
 use std::{env::set_current_dir, fs::File, io::{BufReader, BufRead, BufWriter, Write}};
-
+use serde::{Deserialize, Serialize};
 use cnctd_rest::Rest;
 use cnctd_shell::Shell;
 use toml::Value;
 
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum CrateType {
+    App,
+    Module
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RustCrate {
     pub name: String,
-    pub features: Option<Vec<String>>
+    pub features: Option<Vec<String>>,
+    pub crate_type: CrateType,
 }
 
 impl RustCrate {
-    pub fn new(name: &str, features: Option<Vec<&str>>) -> Self {
+    pub fn new(name: &str, features: Option<Vec<&str>>, crate_type: CrateType) -> Self {
         Self { 
             name: name.to_string(), 
             features: features.map(|vec| vec.iter().map(|&s| s.to_string()).collect()),
+            crate_type
         }
     }
 }
@@ -47,29 +57,29 @@ pub enum Crate {
 impl Crate {
     pub fn to_rust_crate(&self) -> RustCrate {
         match self {
-            Crate::Warp => RustCrate::new("warp", None),
-            Crate::Tokio => RustCrate::new("tokio", Some(vec!["full"])),
-            Crate::Dotenv => RustCrate::new("dotenv", None),
-            Crate::Reqwest => RustCrate::new("reqwest", Some(vec!["json"])),
-            Crate::State => RustCrate::new("state", None),
-            Crate::LocalIpAddress => RustCrate::new("local-ip-address", None),
-            Crate::Serde => RustCrate::new("serde", Some(vec!["derive", "rc"])),
-            Crate::SerdeJson => RustCrate::new("serde_json", None),
-            Crate::Chrono => RustCrate::new("chrono", None),
-            Crate::Diesel => RustCrate::new("diesel", Some(vec!["postgres", "chrono", "serde_json"])),
-            Crate::RusotoSecretsmanager => RustCrate::new("rusoto_secretsmanager", None),
-            Crate::RusotoCore => RustCrate::new("rusoto_core", None),
-            Crate::Uuid => RustCrate::new("uuid", Some(vec!["v4"])),
-            Crate::Anyhow => RustCrate::new("anyhow", None),
-            Crate::ChronoTz => RustCrate::new("chrono-tz", None),
-            Crate::TokioStream => RustCrate::new("tokio-stream", None),
-            Crate::Futures => RustCrate::new("futures", None),
-            Crate::Imap => RustCrate::new("imap", None),
-            Crate::NativeTls => RustCrate::new("native-tls", None),
-            Crate::Regex => RustCrate::new("regex", None),
-            Crate::Mailparse => RustCrate::new("mailparse", None),
-            Crate::Csv => RustCrate::new("csv", None),
-            Crate::Redis => RustCrate::new("redis", Some(vec!["tokio-comp"])),
+            Crate::Warp => RustCrate::new("warp", None, CrateType::Module),
+            Crate::Tokio => RustCrate::new("tokio", Some(vec!["full"]), CrateType::Module),
+            Crate::Dotenv => RustCrate::new("dotenv", None, CrateType::Module),
+            Crate::Reqwest => RustCrate::new("reqwest", Some(vec!["json"]), CrateType::Module),
+            Crate::State => RustCrate::new("state", None, CrateType::Module),
+            Crate::LocalIpAddress => RustCrate::new("local-ip-address", None, CrateType::Module),
+            Crate::Serde => RustCrate::new("serde", Some(vec!["derive", "rc"]), CrateType::Module),
+            Crate::SerdeJson => RustCrate::new("serde_json", None, CrateType::Module),
+            Crate::Chrono => RustCrate::new("chrono", None, CrateType::Module),
+            Crate::Diesel => RustCrate::new("diesel", Some(vec!["postgres", "chrono", "serde_json"]), CrateType::Module),
+            Crate::RusotoSecretsmanager => RustCrate::new("rusoto_secretsmanager", None, CrateType::Module),
+            Crate::RusotoCore => RustCrate::new("rusoto_core", None, CrateType::Module),
+            Crate::Uuid => RustCrate::new("uuid", Some(vec!["v4"]), CrateType::Module),
+            Crate::Anyhow => RustCrate::new("anyhow", None, CrateType::Module),
+            Crate::ChronoTz => RustCrate::new("chrono-tz", None, CrateType::Module),
+            Crate::TokioStream => RustCrate::new("tokio-stream", None, CrateType::Module),
+            Crate::Futures => RustCrate::new("futures", None, CrateType::Module),
+            Crate::Imap => RustCrate::new("imap", None, CrateType::Module),
+            Crate::NativeTls => RustCrate::new("native-tls", None, CrateType::Module),
+            Crate::Regex => RustCrate::new("regex", None, CrateType::Module),
+            Crate::Mailparse => RustCrate::new("mailparse", None, CrateType::Module),
+            Crate::Csv => RustCrate::new("csv", None, CrateType::Module),
+            Crate::Redis => RustCrate::new("redis", Some(vec!["tokio-comp"]), CrateType::Module),
         }
     }
 
@@ -128,10 +138,14 @@ impl Cargo {
         Ok(())
     }
     
-    pub async fn init(path: &str) -> anyhow::Result<()> {
+    pub async fn init(path: &str, crate_type: CrateType) -> anyhow::Result<()> {
         set_current_dir(path)?;
-        let command = format!("cargo init");
-        Shell::run(&command, false).await?;
+        let command = match crate_type {
+            CrateType::App => "cargo init",
+            CrateType::Module => "cargo init --lib"
+        };
+        
+        Shell::run(command, false).await?;
         Ok(())
     }
     
@@ -179,6 +193,64 @@ impl Cargo {
         let json: Value = Rest::get(&url).await?;
         Ok(json["crate"]["max_version"].as_str().unwrap().to_string())
     }
+
+    // pub fn update_rust_project_versions(root_path: &str) -> std::io::Result<()> {
+    //     let mut project_versions: HashMap<String, String> = HashMap::new();
+        
+    //     for entry in WalkDir::new(root_path)
+    //         .into_iter()
+    //         .filter_entry(|e| !is_ignored(e))
+    //     {
+    //         let entry = entry?;
+    //         let path = entry.path();
+    //         let file_name = path.file_name().unwrap_or_default();
+    
+    //         if path.is_file() && file_name.to_str().unwrap() == "Cargo.toml" {
+    //             let contents = std::fs::read_to_string(path)?;
+    //             let toml: TomlValue = contents.parse().unwrap();
+                
+    //             if let Some(package) = toml.get("package") {
+    //                 if let Some(name) = package.get("name").and_then(TomlValue::as_str) {
+    //                     if let Some(version) = package.get("version").and_then(TomlValue::as_str) {
+    //                         project_versions.insert(name.to_string(), version.to_string());
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    
+    //     for entry in WalkDir::new(root_path)
+    //         .into_iter()
+    //         .filter_entry(|e| !is_ignored(e))
+    //     {
+    //         let entry = entry?;
+    //         let path = entry.path();
+    //         let file_name = path.file_name().unwrap_or_default();
+    
+    //         if path.is_file() && file_name.to_str().unwrap() == "Cargo.toml" {
+    //             let mut contents = std::fs::read_to_string(path)?;
+    //             let mut doc = contents.parse::<Document>().unwrap();
+    
+    //             if let Some(table) = doc.as_table_mut().entry("dependencies").as_table_mut() {
+    //                 for (name, version) in project_versions.iter() {
+    //                     if let Some(dep) = table.get(name) {
+    //                         if let Item::Table(dep_table) = dep {
+    //                             if dep_table.contains_key("version") && dep_table.contains_key("path") {
+    //                                 dep_table.get_mut("version").unwrap().as_value_mut().unwrap().as_str_mut().unwrap().replace_range(.., version);
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    
+    //             std::fs::write(path, doc.to_string_in_original_order())?;
+    //         }
+    //     }
+    
+    //     Ok(())
+    // }
 }
 
-
+// fn is_ignored(entry: &DirEntry) -> bool {
+//     entry.file_name().to_str().map(|s| s == "target" || s == "node_modules").unwrap_or(false)
+// }
