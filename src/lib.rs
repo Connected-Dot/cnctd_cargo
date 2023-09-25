@@ -1,9 +1,12 @@
-use std::{env::set_current_dir, fs::File, io::{BufReader, BufRead, BufWriter, Write}};
+use std::{env::set_current_dir, fs::{File, create_dir_all}, io::{BufReader, BufRead, BufWriter, Write}};
+use cargo_toml::Author;
 use serde::{Deserialize, Serialize};
 use cnctd_rest::Rest;
 use cnctd_shell::Shell;
 use toml::Value;
+use toml_edit::{Document, value, Item};
 
+pub mod cargo_toml;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum CrateType {
@@ -26,6 +29,18 @@ impl RustCrate {
             crate_type
         }
     }
+}
+
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RustModule {
+
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RustApp {
+
 }
 
 pub enum Crate {
@@ -139,6 +154,7 @@ impl Cargo {
     }
     
     pub async fn init(path: &str, crate_type: CrateType) -> anyhow::Result<()> {
+        create_dir_all(&path)?;
         set_current_dir(path)?;
         let command = match crate_type {
             CrateType::App => "cargo init",
@@ -172,10 +188,7 @@ impl Cargo {
         let rust_status = Shell::run_with_exit_status("rustc --version", false).await?;
         let cargo_status = Shell::run_with_exit_status("cargo --version", false).await?;
     
-        // println!("rust status: {}", rust_status);
-        // println!("cargo status: {}", cargo_status);
         if rust_status == 0 && cargo_status == 0 {
-            // println!("Rust and Cargo are installed.");
         } else {
             if rust_status != 0 {
                 println!("Rust is not installed.");
@@ -194,6 +207,49 @@ impl Cargo {
         Ok(json["crate"]["max_version"].as_str().unwrap().to_string())
     }
 
+    pub async fn update_cargo_toml(author: Author, description: &str, repository: &str, license: &str, crate_type: CrateType) -> anyhow::Result<()> {
+        // Read the existing Cargo.toml into a string
+        let data = std::fs::read_to_string("Cargo.toml")?;
+        
+        // Parse the string into a TOML Document
+        let mut doc = data.parse::<Document>()?;
+        
+        // Access the [package] table
+        let package = doc["package"].as_table_mut().unwrap();
+        
+        // Create an Item for authors
+        let mut authors_array = toml_edit::Array::new();
+        let author_str = format!("{} <{}>", author.name, author.email);
+        authors_array.push(author.organization);
+        authors_array.push(author_str);
+        
+
+        let mut keywords_array = toml_edit::Array::new();
+        match crate_type {
+            CrateType::App => keywords_array.push("app"),
+            CrateType::Module => keywords_array.push("module"),
+        }
+        
+        // Update fields
+        package.insert("authors", value(authors_array));
+        package.insert("description", value(description));
+        package.insert("repository", value(repository));
+        package.insert("license", value(license));
+        package.insert("keywords", value(keywords_array));
+        
+        // Write the Document back to Cargo.toml
+        std::fs::write("Cargo.toml", doc.to_string())?;
+        
+        Ok(())
+    }
+    
+    pub async fn publish_crate(path: &str) -> anyhow::Result<()> {
+        set_current_dir(path)?;
+        Shell::run("cargo publish", false).await?;
+
+        Ok(())
+    }
+    
     // pub fn update_rust_project_versions(root_path: &str) -> std::io::Result<()> {
     //     let mut project_versions: HashMap<String, String> = HashMap::new();
         
