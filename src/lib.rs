@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use cnctd_rest::Rest;
 use cnctd_shell::Shell;
 use toml::Value;
-use toml_edit::{Document, value, Item};
+use toml_edit::{Document, value};
 
 pub mod cargo_toml;
 
