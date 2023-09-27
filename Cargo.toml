@@ -1,6 +1,6 @@
 [package]
 name = "cnctd_cargo"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 authors = ["Connected Dot Inc.", "Kyle Ebner <kyle@cnctd.world>"]
 description = "Cargo Methods"
@@ -14,7 +14,9 @@ repository = "https://github.com/Connected-Dot/cnctd_cargo"
 anyhow = "1.0.75"
 cnctd_rest = { version = "0.1.2", path = "../cnctd_rest" }
 cnctd_shell = { version = "0.1.7", path = "../cnctd_shell" }
+glob = "0.3.1"
 serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"
 tokio = { version = "1.32.0", features = ["full"] }
 toml = "0.8.0"
 toml_edit = "0.20.0"

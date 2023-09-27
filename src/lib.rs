@@ -1,10 +1,11 @@
-use std::{env::set_current_dir, fs::{File, create_dir_all}, io::{BufReader, BufRead, BufWriter, Write}};
+use std::{env::set_current_dir, fs::{File, create_dir_all, read_to_string}, io::{BufReader, BufRead, BufWriter, Write}, path::Path};
 use cargo_toml::Author;
 use serde::{Deserialize, Serialize};
 use cnctd_rest::Rest;
 use cnctd_shell::Shell;
 use toml::Value;
 use toml_edit::{Document, value};
+use glob::glob;
 
 pub mod cargo_toml;
 
@@ -203,7 +204,7 @@ impl Cargo {
     
     pub async fn get_latest_crate_version(crate_name: &str) -> anyhow::Result<String> {
         let url = format!("https://crates.io/api/v1/crates/{}", crate_name);
-        let json: Value = Rest::get(&url).await?;
+        let json: serde_json::Value = Rest::get(&url).await?;
         Ok(json["crate"]["max_version"].as_str().unwrap().to_string())
     }
 
@@ -249,6 +250,62 @@ impl Cargo {
 
         Ok(())
     }
+    
+    pub fn get_workspace_members(root_cargo_toml: &Path) -> anyhow::Result<Vec<String>> {
+        let content = read_to_string(root_cargo_toml)?;
+        let value: toml::Value = content.parse()?;
+    
+        // Check if the "workspace" key exists
+        if let Some(workspace) = value.get("workspace") {
+            if let Some(members) = workspace.get("members").and_then(|m| m.as_array()) {
+                let mut expanded_members = Vec::new();
+                
+                for member in members.iter().filter_map(|v| v.as_str()) {
+                    if member.contains('*') {
+                        for entry in glob(member)? {
+                            match entry {
+                                Ok(path) => {
+                                    if path.is_dir() {
+                                        expanded_members.push(path.to_str().unwrap().to_string());
+                                    }
+                                },
+                                Err(_) => continue,
+                            }
+                        }
+                    } else {
+                        expanded_members.push(member.to_string());
+                    }
+                }
+                
+                return Ok(expanded_members);
+            }
+        }
+    
+        // If "workspace" key doesn't exist or "members" is not an array, return an empty Vec
+        Ok(Vec::new())
+    }
+
+    pub async fn get_local_dependencies(member_cargo_toml: &Path) -> anyhow::Result<Vec<(String, String)>> {
+        let content = read_to_string(member_cargo_toml)?;
+        let value: toml::Value = content.parse()?;
+        let dependencies = value["dependencies"]
+            .as_table()
+            .ok_or(anyhow::anyhow!("Failed to read dependencies"))?;
+        
+        let mut local_deps = Vec::new();
+        
+        for (name, dep) in dependencies.iter() {
+            if let Some(path) = dep.get("path") {
+                if let Some(_version) = dep.get("version") {
+                    local_deps.push((name.clone(), path.as_str().unwrap().to_string()));
+                    
+                }
+            }
+        }
+        
+        Ok(local_deps)
+    }
+    
     
     // pub fn update_rust_project_versions(root_path: &str) -> std::io::Result<()> {
     //     let mut project_versions: HashMap<String, String> = HashMap::new();
