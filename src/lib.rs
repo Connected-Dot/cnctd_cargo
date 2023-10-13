@@ -6,6 +6,7 @@ use cnctd_shell::Shell;
 use toml::Value;
 use toml_edit::{Document, value};
 use glob::glob;
+use anyhow::anyhow;
 
 pub mod cargo_toml;
 
@@ -166,7 +167,7 @@ impl Cargo {
         Ok(())
     }
     
-    pub fn get_app_version(package_dir: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn get_package_version(package_dir: &str) -> anyhow::Result<String> {
         let toml_str = std::fs::read_to_string(format!("{}/Cargo.toml", package_dir))?;
         let parsed_toml: Value = toml::from_str(&toml_str)?;
     
@@ -174,7 +175,7 @@ impl Cargo {
             .get("package")
             .and_then(|package| package.get("version"))
             .and_then(|version| version.as_str())
-            .ok_or_else(|| "could not parse version from Cargo.toml")?;
+            .ok_or_else(|| anyhow!("could not parse version from Cargo.toml"))?;
     
         Ok(version.to_owned())
     }
@@ -306,7 +307,7 @@ impl Cargo {
         Ok(local_deps)
     }
     
-    pub fn get_package_name(package_dir: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn get_package_name(package_dir: &str) -> anyhow::Result<String> {
         let toml_str = std::fs::read_to_string(format!("{}/Cargo.toml", package_dir))?;
         let parsed_toml: Value = toml::from_str(&toml_str)?;
     
@@ -314,11 +315,24 @@ impl Cargo {
             .get("package")
             .and_then(|package| package.get("name"))
             .and_then(|version| version.as_str())
-            .ok_or_else(|| "could not parse version from Cargo.toml")?;
+            .ok_or_else(|| anyhow!("could not parse name from Cargo.toml"))?;
     
         Ok(version.to_owned())
     }
     
+    pub fn get_package_repo(package_dir: &str) -> anyhow::Result<String> {
+        let toml_str = std::fs::read_to_string(format!("{}/Cargo.toml", package_dir))?;
+        let parsed_toml: Value = toml::from_str(&toml_str)?;
+    
+        let version = parsed_toml
+            .get("package")
+            .and_then(|package| package.get("repository"))
+            .and_then(|version| version.as_str())
+            .ok_or_else(|| anyhow!("could not parse repo from Cargo.toml"))?;
+    
+        Ok(version.to_owned())
+    }
+
     // pub fn update_rust_project_versions(root_path: &str) -> std::io::Result<()> {
     //     let mut project_versions: HashMap<String, String> = HashMap::new();
         
