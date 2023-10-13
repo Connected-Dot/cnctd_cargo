@@ -306,6 +306,18 @@ impl Cargo {
         Ok(local_deps)
     }
     
+    pub fn get_package_name(package_dir: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let toml_str = std::fs::read_to_string(format!("{}/Cargo.toml", package_dir))?;
+        let parsed_toml: Value = toml::from_str(&toml_str)?;
+    
+        let version = parsed_toml
+            .get("package")
+            .and_then(|package| package.get("name"))
+            .and_then(|version| version.as_str())
+            .ok_or_else(|| "could not parse version from Cargo.toml")?;
+    
+        Ok(version.to_owned())
+    }
     
     // pub fn update_rust_project_versions(root_path: &str) -> std::io::Result<()> {
     //     let mut project_versions: HashMap<String, String> = HashMap::new();
