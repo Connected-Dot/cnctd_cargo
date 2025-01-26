@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use cnctd_rest::Rest;
 use cnctd_shell::Shell;
 use toml::Value;
-use toml_edit::{Document, value};
+use toml_edit::{DocumentMut, value};
 use glob::glob;
 use anyhow::anyhow;
 
@@ -214,7 +214,7 @@ impl Cargo {
         let data = std::fs::read_to_string("Cargo.toml")?;
         
         // Parse the string into a TOML Document
-        let mut doc = data.parse::<Document>()?;
+        let mut doc = data.parse::<DocumentMut>()?;
         
         // Access the [package] table
         let package = doc["package"].as_table_mut().unwrap();
